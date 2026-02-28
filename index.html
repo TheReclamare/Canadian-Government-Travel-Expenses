@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canadian Government Travel Expenses — 2015–2025</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff;--bg-card:#f8f9fb;--bg-card-hover:#f0f2f5;--bg-table-row:#fff;--bg-table-alt:#f8f9fb;--border:#e2e5ea;--border-light:#cdd2da;--text:#1a1f2e;--text-muted:#5c6478;--text-dim:#8b92a3;--accent:#b8860b;--accent-dim:rgba(184,134,11,.1)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+#loading-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s}
+#loading-screen.fade-out{opacity:0;pointer-events:none}
+.loader-bar{width:280px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:24px}
+.loader-bar-fill{height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width .3s}
+.loader-text{font-family:'IBM Plex Mono',monospace;color:var(--text-muted);font-size:13px;margin-top:12px}
+header{border-bottom:1px solid var(--border);padding:40px 0 32px;background:linear-gradient(180deg,rgba(184,134,11,.04) 0%,transparent 100%)}
+.container{max-width:1400px;margin:0 auto;padding:0 32px}
+header .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+header h1{font-family:'DM Serif Display',serif;font-size:clamp(28px,4vw,44px);font-weight:400;color:var(--text);line-height:1.15;margin-bottom:10px}
+header .subtitle{color:var(--text-muted);font-size:15px;max-width:680px}
+header .subtitle span{color:var(--accent);font-weight:600}
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding:32px 0}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 24px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px}
+.kpi-value{font-size:28px;font-weight:700;color:var(--text);line-height:1.2}
+.kpi-value .currency{font-size:18px;color:var(--text-muted);font-weight:500}
+.kpi-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+section{padding:40px 0}
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.section-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--text)}
+.section-subtitle{font-size:13px;color:var(--text-muted)}
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.chart-card h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.chart-card .chart-desc{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+.year-selector{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px}
+.yr-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.yr-btn:hover{border-color:var(--border-light);color:var(--text)}
+.yr-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.year-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:28px}
+.ys-item{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.ys-item .ys-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:3px}
+.ys-item .ys-val{font-size:20px;font-weight:700;color:var(--text)}
+.ys-item .ys-val .sm{font-size:14px;color:var(--text-muted);font-weight:500}
+.top10-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:1000px){.top10-grid{grid-template-columns:1fr}}
+.top10-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.top10-card h3{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.top10-card h3 .badge{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;background:var(--accent-dim);color:var(--accent);padding:2px 8px;border-radius:4px}
+.top10-card .card-desc{font-size:12px;color:var(--text-muted);margin-bottom:16px}
+.top10-table{width:100%;border-collapse:collapse;font-size:13px}
+.top10-table th{text-align:left;padding:8px 10px;font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim);border-bottom:2px solid var(--border)}
+.top10-table th.r{text-align:right}
+.top10-table td{padding:9px 10px;border-bottom:1px solid rgba(226,229,234,.6);color:var(--text)}
+.top10-table tbody tr{cursor:pointer;transition:background .1s}
+.top10-table tbody tr:hover{background:var(--bg-card-hover)}
+.top10-table .rank{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--text-dim);width:30px}
+.top10-table .rank.gold{color:#b8860b}
+.top10-table .rank.silver{color:#8b8b8b}
+.top10-table .rank.bronze{color:#a0522d}
+.top10-table .name-cell{font-weight:500}
+.top10-table .name-cell .sub{font-size:11px;color:var(--text-muted);font-weight:400;display:block;margin-top:1px}
+.top10-table .money{font-family:'IBM Plex Mono',monospace;text-align:right;font-size:12px;white-space:nowrap}
+.top10-table .money.accent{color:var(--accent);font-weight:600}
+.table-controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.search-box{flex:1;min-width:240px;position:relative}
+.search-box input{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px 10px 40px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
+.search-box input:focus{border-color:var(--accent)}
+.search-box input::placeholder{color:var(--text-dim)}
+.search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);width:18px;height:18px}
+.filter-select{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--text);outline:none;cursor:pointer;min-width:160px}
+.filter-select option{background:var(--bg-card);color:var(--text)}
+.search-year-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.sy-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.sy-btn:hover{border-color:var(--border-light);color:var(--text)}
+.sy-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.results-info{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);margin-bottom:12px}
+.table-wrapper{overflow-x:auto;border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+table.data-table{width:100%;border-collapse:collapse;font-size:13px}
+table.data-table thead th{background:var(--bg-card);padding:12px 14px;text-align:left;font-weight:600;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0;z-index:2}
+table.data-table thead th:hover{color:var(--accent)}
+table.data-table thead th .sort-arrow{margin-left:4px;font-size:10px}
+table.data-table tbody td{padding:10px 14px;border-bottom:1px solid rgba(226,229,234,.6);color:var(--text);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.data-table tbody tr{background:var(--bg-table-row)}
+table.data-table tbody tr:nth-child(even){background:var(--bg-table-alt)}
+table.data-table tbody tr:hover{background:var(--bg-card-hover);cursor:pointer}
+td.money{font-family:'IBM Plex Mono',monospace;font-size:12px;text-align:right;white-space:nowrap}
+td.money.total-col{color:var(--accent);font-weight:600}
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;padding:20px 0}
+.page-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.page-btn:hover:not(:disabled){border-color:var(--border-light);color:var(--text)}
+.page-btn:disabled{opacity:.3;cursor:default}
+.page-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.page-info{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);margin:0 8px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border:1px solid var(--border);border-radius:14px;max-width:700px;width:100%;max-height:85vh;overflow-y:auto;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-close{float:right;background:none;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;padding:4px 8px;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal h2{font-family:'DM Serif Display',serif;font-size:22px;margin-bottom:4px;padding-right:40px}
+.modal .modal-subtitle{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+.modal .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.detail-item label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:3px}
+.detail-item span{font-size:14px;color:var(--text);word-break:break-word}
+.detail-item.wide{grid-column:1/-1}
+.cost-breakdown{background:rgba(184,134,11,.05);border:1px solid var(--accent-dim);border-radius:8px;padding:16px;margin-top:16px}
+.cost-breakdown h4{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:12px;letter-spacing:.5px;text-transform:uppercase}
+.cost-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.cost-row .cost-label{color:var(--text-muted)}
+.cost-row .cost-val{font-family:'IBM Plex Mono',monospace;color:var(--text)}
+.cost-row.cost-total{border-top:1px solid var(--border);margin-top:8px;padding-top:10px;font-weight:600}
+.cost-row.cost-total .cost-val{color:var(--accent)}
+footer{border-top:1px solid var(--border);padding:32px 0;text-align:center}
+footer p{font-size:13px;color:var(--text-dim)}
+footer a{color:var(--accent);text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+@media(max-width:640px){.container{padding:0 16px}.kpi-strip{grid-template-columns:1fr 1fr}.modal .detail-grid{grid-template-columns:1fr}.year-summary{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="loading-screen">
+<div style="text-align:center">
+<div style="font-family:'DM Serif Display',serif;font-size:28px;color:var(--text);margin-bottom:4px">Loading Travel Data</div>
+<div style="font-size:13px;color:var(--text-muted)">Parsing 106,000+ expense records…</div>
+</div>
+<div class="loader-bar"><div class="loader-bar-fill" id="loader-fill"></div></div>
+<div class="loader-text" id="loader-text">Initializing…</div>
+</div>
+
+<header><div class="container">
+<div class="eyebrow">Open Data · Proactive Disclosure</div>
+<h1>Canadian Government Travel Expenses</h1>
+<p class="subtitle"><span>106,000+</span> travel expense disclosures from <span>140</span> federal departments and agencies, spanning fiscal years <span>2015 – 2025</span>. Source: Government of Canada Open Data Portal.</p>
+</div></header>
+
+<div class="container"><div class="kpi-strip">
+<div class="kpi-card"><div class="kpi-label">Total Expenditure</div><div class="kpi-value" id="kpi-total"><span class="currency">$</span>—</div><div class="kpi-sub">All categories combined</div></div>
+<div class="kpi-card"><div class="kpi-label">Total Trips</div><div class="kpi-value" id="kpi-trips">—</div><div class="kpi-sub">Individual travel records</div></div>
+<div class="kpi-card"><div class="kpi-label">Average Trip Cost</div><div class="kpi-value" id="kpi-avg"><span class="currency">$</span>—</div><div class="kpi-sub">Mean cost per trip</div></div>
+<div class="kpi-card"><div class="kpi-label">Airfare Portion</div><div class="kpi-value" id="kpi-airfare">—<span class="currency">%</span></div><div class="kpi-sub">Of total expenditure</div></div>
+<div class="kpi-card"><div class="kpi-label">Peak Year</div><div class="kpi-value" id="kpi-peak">—</div><div class="kpi-sub" id="kpi-peak-sub">—</div></div>
+</div></div>
+
+<section><div class="container"><div class="chart-card">
+<h3>Annual Spending &amp; Trip Volume</h3>
+<p class="chart-desc">Total expenditure (bars) and number of trips (line) per year. Click a bar to jump to that year's Top 10.</p>
+<div style="position:relative;height:320px"><canvas id="chart-yearly"></canvas></div>
+</div></div></section>
+
+<section id="year-section"><div class="container">
+<div class="section-header"><div><h2 class="section-title">Year in Detail</h2><p class="section-subtitle">Select a year to see the top trips, top spenders, and summary statistics</p></div></div>
+<div class="year-selector" id="year-selector"></div>
+<div class="year-summary" id="year-summary"></div>
+<div class="top10-grid">
+<div class="top10-card"><h3>Most Expensive Single Trips <span class="badge" id="trips-badge">2025</span></h3><p class="card-desc">Highest cost individual trips taken this year</p><table class="top10-table" id="top-trips-table"><thead><tr><th width="30">#</th><th>Traveler</th><th>Destination</th><th class="r">Total</th></tr></thead><tbody></tbody></table></div>
+<div class="top10-card"><h3>Biggest Annual Spenders <span class="badge" id="spenders-badge">2025</span></h3><p class="card-desc">Individuals with the highest combined travel costs this year</p><table class="top10-table" id="top-spenders-table"><thead><tr><th width="30">#</th><th>Traveler</th><th>Trips</th><th class="r">Total</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div></section>
+
+<section id="table-section"><div class="container">
+<div class="section-header"><div><h2 class="section-title">Explore All Records</h2><p class="section-subtitle">Search by name, department, destination, or purpose. Click any row for full details.</p></div></div>
+<div class="table-controls">
+<div class="search-box"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" id="search-input" placeholder="Search names, departments, destinations, purpose…"></div>
+<select class="filter-select" id="dept-filter"><option value="">All Departments</option></select>
+<select class="filter-select" id="group-filter"><option value="">All Groups</option><option value="SLE">SLE – Senior Executives</option><option value="MPSES">MPSES – Ministers/Political Staff</option></select>
+</div>
+<div class="search-year-btns" id="search-year-btns"></div>
+<div class="results-info" id="results-info">Loading…</div>
+<div class="table-wrapper"><table class="data-table"><thead><tr>
+<th data-col="name">Name <span class="sort-arrow"></span></th>
+<th data-col="title_en">Title <span class="sort-arrow"></span></th>
+<th data-col="owner_org_en">Department <span class="sort-arrow"></span></th>
+<th data-col="destination_en">Destination <span class="sort-arrow"></span></th>
+<th data-col="purpose_en">Purpose <span class="sort-arrow"></span></th>
+<th data-col="start_date">Date <span class="sort-arrow"></span></th>
+<th data-col="airfare">Airfare <span class="sort-arrow"></span></th>
+<th data-col="total">Total <span class="sort-arrow"></span></th>
+</tr></thead><tbody id="table-body"></tbody></table></div>
+<div class="pagination" id="pagination"></div>
+</div></section>
+
+<div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal-content"></div></div>
+
+<footer><div class="container">
+<p>Data sourced from the <a href="https://open.canada.ca/data/en/dataset" target="_blank">Government of Canada Open Data Portal</a> — Proactive Disclosure of Travel Expenses.</p>
+<p style="margin-top:6px">Dashboard is for informational purposes. Figures reflect disclosed amounts in Canadian dollars.</p>
+</div></footer>
+
+<script>
+let allData=[],filteredData=[],currentPage=1,sortCol='total',sortDir=-1,selectedYear=2025,orgNames={};
+const PAGE_SIZE=50;
+const fmt=n=>(n==null||isNaN(n))?'—':n.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtShort=n=>{if(n>=1e9)return'$'+(n/1e9).toFixed(1)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'$'+(n/1e3).toFixed(0)+'K';return'$'+n.toFixed(0)};
+const toNum=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+const esc=s=>!s?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const trunc=(s,n)=>!s?'':s.length>n?s.slice(0,n)+'…':s;
+
+function updateLoader(p,t){document.getElementById('loader-fill').style.width=p+'%';document.getElementById('loader-text').textContent=t}
+updateLoader(5,'Fetching CSV…');
+
+Papa.parse('2015travelq.csv',{
+download:true,header:true,skipEmptyLines:true,
+complete:function(res){
+updateLoader(50,'Processing '+res.data.length.toLocaleString()+' records…');
+allData=res.data.map(r=>({
+name:(r.name||'').trim(),title_en:(r.title_en||'').trim(),
+owner_org:(r.owner_org||'').trim(),owner_org_title:(r.owner_org_title||'').trim(),
+owner_org_en:((r.owner_org_title||'').split('|')[0]||(r.owner_org||'')).trim(),
+disclosure_group:(r.disclosure_group||'').trim().toUpperCase(),
+purpose_en:(r.purpose_en||'').trim(),start_date:(r.start_date||'').trim(),end_date:(r.end_date||'').trim(),
+destination_en:(r.destination_en||'').trim(),
+airfare:toNum(r.airfare),other_transport:toNum(r.other_transport),lodging:toNum(r.lodging),
+meals:toNum(r.meals),other_expenses:toNum(r.other_expenses),total:toNum(r.total),
+additional_comments_en:(r.additional_comments_en||'').trim(),
+_year:(()=>{const d=new Date(r.start_date);return isNaN(d)?null:d.getFullYear()})(),
+_search:[r.name,r.title_en,r.owner_org,r.owner_org_title,r.destination_en,r.purpose_en].join(' ').toLowerCase()
+})).filter(r=>r.name&&r.total!=null);
+allData.forEach(r=>{if(r.owner_org&&r.owner_org_en)orgNames[r.owner_org]=r.owner_org_en});
+updateLoader(75,'Building dashboard…');
+setTimeout(()=>{buildDashboard();updateLoader(100,'Done');setTimeout(()=>document.getElementById('loading-screen').classList.add('fade-out'),300)},50);
+},
+error:function(){document.getElementById('loader-text').textContent='Error loading CSV. Ensure "2015travelq.csv" is in the same folder.'}
+});
+
+function buildDashboard(){buildKPIs();buildYearlyChart();buildYearSelector();updateYearView(selectedYear);buildSearchFilters();filteredData=[...allData];applySort();renderTable();bindEvents()}
+
+function buildKPIs(){
+const ts=allData.reduce((s,r)=>s+r.total,0),ta=allData.reduce((s,r)=>s+r.airfare,0);
+document.getElementById('kpi-total').innerHTML='<span class="currency">$</span>'+Math.round(ts/1e6).toLocaleString()+'<span class="currency">M</span>';
+document.getElementById('kpi-trips').textContent=allData.length.toLocaleString();
+document.getElementById('kpi-avg').innerHTML='<span class="currency">$</span>'+Math.round(ts/allData.length).toLocaleString();
+document.getElementById('kpi-airfare').innerHTML=(ta/ts*100).toFixed(1)+'<span class="currency">%</span>';
+const byY={};allData.forEach(r=>{if(r._year)byY[r._year]=(byY[r._year]||0)+r.total});
+const pk=Object.entries(byY).sort((a,b)=>b[1]-a[1])[0];
+if(pk){document.getElementById('kpi-peak').textContent=pk[0];document.getElementById('kpi-peak-sub').textContent=fmtShort(pk[1])+' spent'}
+}
+
+function buildYearlyChart(){
+Chart.defaults.color='#5c6478';Chart.defaults.borderColor='rgba(226,229,234,.8)';Chart.defaults.font.family="'IBM Plex Sans',sans-serif";
+const byY={};allData.forEach(r=>{if(!r._year||r._year<2015||r._year>2025)return;if(!byY[r._year])byY[r._year]={spend:0,trips:0};byY[r._year].spend+=r.total;byY[r._year].trips+=1});
+const yrs=Object.keys(byY).sort();
+new Chart(document.getElementById('chart-yearly'),{type:'bar',
+data:{labels:yrs,datasets:[
+{label:'Total Spend',data:yrs.map(y=>byY[y].spend),backgroundColor:'rgba(184,134,11,.55)',borderColor:'rgba(184,134,11,1)',borderWidth:1,borderRadius:4,yAxisID:'y',order:2},
+{label:'Trip Count',data:yrs.map(y=>byY[y].trips),type:'line',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',pointBackgroundColor:'#2563eb',pointRadius:4,tension:.3,fill:true,yAxisID:'y1',order:1}
+]},
+options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+onClick:(e,items)=>{if(items.length){const yr=parseInt(yrs[items[0].index]);if(yr>=2015&&yr<=2025){selectedYear=yr;document.querySelectorAll('.yr-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.year)===yr));updateYearView(yr);document.getElementById('year-section').scrollIntoView({behavior:'smooth',block:'start'})}}},
+scales:{y:{position:'left',ticks:{callback:v=>fmtShort(v)},grid:{color:'rgba(226,229,234,.6)'}},y1:{position:'right',ticks:{callback:v=>v.toLocaleString()},grid:{display:false}},x:{grid:{display:false}}},
+plugins:{tooltip:{callbacks:{label:ctx=>ctx.dataset.label==='Total Spend'?'Spend: $'+fmt(ctx.raw):'Trips: '+ctx.raw.toLocaleString()}}}}
+})}
+
+function buildYearSelector(){
+const div=document.getElementById('year-selector');
+for(let y=2015;y<=2025;y++){const btn=document.createElement('button');btn.className='yr-btn'+(y===selectedYear?' active':'');btn.textContent=y;btn.dataset.year=y;
+btn.onclick=()=>{selectedYear=y;document.querySelectorAll('.yr-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');updateYearView(y)};div.appendChild(btn)}
+}
+
+function updateYearView(year){
+const yd=allData.filter(r=>r._year===year);
+const ts=yd.reduce((s,r)=>s+r.total,0);
+const ds={};yd.forEach(r=>{ds[r.owner_org]=(ds[r.owner_org]||0)+r.total});
+const td=Object.entries(ds).sort((a,b)=>b[1]-a[1])[0];
+document.getElementById('year-summary').innerHTML=`
+<div class="ys-item"><div class="ys-label">Total Spend</div><div class="ys-val"><span class="sm">$</span>${fmtShort(ts).slice(1)}</div></div>
+<div class="ys-item"><div class="ys-label">Trips</div><div class="ys-val">${yd.length.toLocaleString()}</div></div>
+<div class="ys-item"><div class="ys-label">Avg Trip Cost</div><div class="ys-val"><span class="sm">$</span>${yd.length?Math.round(ts/yd.length).toLocaleString():'—'}</div></div>
+<div class="ys-item"><div class="ys-label">Unique Travelers</div><div class="ys-val">${new Set(yd.map(r=>r.name)).size.toLocaleString()}</div></div>
+<div class="ys-item"><div class="ys-label">Departments</div><div class="ys-val">${new Set(yd.map(r=>r.owner_org)).size}</div></div>
+<div class="ys-item"><div class="ys-label">Top Department</div><div class="ys-val" style="font-size:14px">${td?esc(orgNames[td[0]]||td[0]):'—'}</div></div>`;
+
+const topTrips=[...yd].sort((a,b)=>b.total-a.total).slice(0,10);
+document.getElementById('trips-badge').textContent=year;
+document.querySelector('#top-trips-table tbody').innerHTML=topTrips.map((r,i)=>`
+<tr data-ridx="${allData.indexOf(r)}">
+<td class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</td>
+<td class="name-cell">${esc(r.name)}<span class="sub">${esc(trunc(r.owner_org_en,40))}</span></td>
+<td>${esc(trunc(r.destination_en,35))}</td>
+<td class="money accent">$${fmt(r.total)}</td>
+</tr>`).join('');
+
+const sm={};yd.forEach(r=>{if(!sm[r.name])sm[r.name]={name:r.name,total:0,trips:0,org:r.owner_org_en,title:r.title_en};sm[r.name].total+=r.total;sm[r.name].trips+=1});
+const topS=Object.values(sm).sort((a,b)=>b.total-a.total).slice(0,10);
+document.getElementById('spenders-badge').textContent=year;
+document.querySelector('#top-spenders-table tbody').innerHTML=topS.map((s,i)=>`
+<tr><td class="rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</td>
+<td class="name-cell">${esc(s.name)}<span class="sub">${esc(trunc(s.org,40))}</span></td>
+<td style="text-align:center">${s.trips}</td>
+<td class="money accent">$${fmt(s.total)}</td></tr>`).join('')}
+
+function buildSearchFilters(){
+const d={};allData.forEach(r=>{d[r.owner_org]=(d[r.owner_org]||0)+1});
+const sel=document.getElementById('dept-filter');
+Object.entries(d).sort((a,b)=>b[1]-a[1]).forEach(([o,c])=>{const op=document.createElement('option');op.value=o;op.textContent=(orgNames[o]||o)+' ('+c.toLocaleString()+')';sel.appendChild(op)});
+const yb=document.getElementById('search-year-btns');
+const ab=document.createElement('button');ab.className='sy-btn active';ab.textContent='All Years';ab.dataset.year='';yb.appendChild(ab);
+for(let y=2015;y<=2025;y++){const b=document.createElement('button');b.className='sy-btn';b.textContent=y;b.dataset.year=y;yb.appendChild(b)}
+}
+
+function applyFilters(){
+const q=document.getElementById('search-input').value.toLowerCase().trim();
+const dept=document.getElementById('dept-filter').value;
+const grp=document.getElementById('group-filter').value;
+const yr=document.querySelector('.sy-btn.active')?.dataset.year;
+filteredData=allData.filter(r=>{
+if(q&&!r._search.includes(q))return false;
+if(dept&&r.owner_org!==dept)return false;
+if(grp&&r.disclosure_group!==grp)return false;
+if(yr&&String(r._year)!==yr)return false;return true});
+currentPage=1;applySort();renderTable()}
+
+function applySort(){filteredData.sort((a,b)=>{let va=a[sortCol],vb=b[sortCol];if(typeof va==='string')va=va.toLowerCase();if(typeof vb==='string')vb=vb.toLowerCase();if(va<vb)return -1*sortDir;if(va>vb)return 1*sortDir;return 0})}
+
+function renderTable(){
+const total=filteredData.length,pages=Math.ceil(total/PAGE_SIZE),start=(currentPage-1)*PAGE_SIZE,page=filteredData.slice(start,start+PAGE_SIZE);
+const fSpend=filteredData.reduce((s,r)=>s+r.total,0);
+document.getElementById('results-info').textContent=total.toLocaleString()+' records · $'+fmt(fSpend)+' total spend'+(total<allData.length?' (filtered from '+allData.length.toLocaleString()+')':'');
+document.getElementById('table-body').innerHTML=page.map((r,i)=>`
+<tr data-idx="${start+i}">
+<td title="${esc(r.name)}">${esc(r.name)}</td>
+<td title="${esc(r.title_en)}">${esc(trunc(r.title_en,30))}</td>
+<td title="${esc(r.owner_org_en)}">${esc(trunc(r.owner_org_en,30))}</td>
+<td title="${esc(r.destination_en)}">${esc(trunc(r.destination_en,28))}</td>
+<td title="${esc(r.purpose_en)}" style="max-width:350px;white-space:normal;line-height:1.4">${esc(trunc(r.purpose_en,120))}</td>
+<td style="white-space:nowrap">${esc(r.start_date)}</td>
+<td class="money">$${fmt(r.airfare)}</td>
+<td class="money total-col">$${fmt(r.total)}</td></tr>`).join('');
+const pd=document.getElementById('pagination');
+if(pages<=1){pd.innerHTML='';return}
+let h=`<button class="page-btn" onclick="goPage(1)" ${currentPage===1?'disabled':''}>«</button><button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+getPageRange(currentPage,pages).forEach(p=>{h+=p==='...'?'<span class="page-info">…</span>':`<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`});
+h+=`<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button><button class="page-btn" onclick="goPage(${pages})" ${currentPage===pages?'disabled':''}>»</button><span class="page-info">Page ${currentPage} of ${pages.toLocaleString()}</span>`;
+pd.innerHTML=h}
+
+function getPageRange(c,t){if(t<=7)return Array.from({length:t},(_,i)=>i+1);const p=[1];if(c>3)p.push('...');for(let i=Math.max(2,c-1);i<=Math.min(t-1,c+1);i++)p.push(i);if(c<t-2)p.push('...');p.push(t);return p}
+function goPage(p){const t=Math.ceil(filteredData.length/PAGE_SIZE);currentPage=Math.max(1,Math.min(t,p));renderTable();document.getElementById('table-section').scrollIntoView({behavior:'smooth',block:'start'})}
+
+function showDetail(r){
+if(!r)return;
+document.getElementById('modal-content').innerHTML=`
+<button class="modal-close" onclick="closeModal()">×</button>
+<h2>${esc(r.name)}</h2>
+<p class="modal-subtitle">${esc(r.title_en)} · ${esc(r.disclosure_group)}</p>
+<div class="detail-grid">
+<div class="detail-item"><label>Department</label><span>${esc(r.owner_org_en||r.owner_org)}</span></div>
+<div class="detail-item"><label>Dates</label><span>${esc(r.start_date)} → ${esc(r.end_date)}</span></div>
+<div class="detail-item wide"><label>Destination</label><span>${esc(r.destination_en)}</span></div>
+<div class="detail-item wide"><label>Purpose</label><span>${esc(r.purpose_en)}</span></div>
+${r.additional_comments_en?`<div class="detail-item wide"><label>Comments</label><span>${esc(r.additional_comments_en)}</span></div>`:''}
+</div>
+<div class="cost-breakdown"><h4>Cost Breakdown</h4>
+<div class="cost-row"><span class="cost-label">Airfare</span><span class="cost-val">$${fmt(r.airfare)}</span></div>
+<div class="cost-row"><span class="cost-label">Other Transport</span><span class="cost-val">$${fmt(r.other_transport)}</span></div>
+<div class="cost-row"><span class="cost-label">Lodging</span><span class="cost-val">$${fmt(r.lodging)}</span></div>
+<div class="cost-row"><span class="cost-label">Meals</span><span class="cost-val">$${fmt(r.meals)}</span></div>
+<div class="cost-row"><span class="cost-label">Other Expenses</span><span class="cost-val">$${fmt(r.other_expenses)}</span></div>
+<div class="cost-row cost-total"><span class="cost-label">Total</span><span class="cost-val">$${fmt(r.total)}</span></div></div>`;
+document.getElementById('modal-overlay').classList.add('active')}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('active')}
+
+function bindEvents(){
+let st;document.getElementById('search-input').addEventListener('input',()=>{clearTimeout(st);st=setTimeout(applyFilters,250)});
+document.getElementById('dept-filter').addEventListener('change',applyFilters);
+document.getElementById('group-filter').addEventListener('change',applyFilters);
+document.getElementById('search-year-btns').addEventListener('click',e=>{if(!e.target.classList.contains('sy-btn'))return;document.querySelectorAll('.sy-btn').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');applyFilters()});
+document.getElementById('table-body').addEventListener('click',e=>{const tr=e.target.closest('tr');if(!tr)return;showDetail(filteredData[parseInt(tr.dataset.idx)])});
+document.querySelector('#top-trips-table tbody').addEventListener('click',e=>{const tr=e.target.closest('tr');if(!tr)return;const idx=parseInt(tr.dataset.ridx);if(!isNaN(idx))showDetail(allData[idx])});
+document.querySelectorAll('table.data-table thead th[data-col]').forEach(th=>{th.addEventListener('click',()=>{const col=th.dataset.col;if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=(col==='total'||col==='airfare')?-1:1}document.querySelectorAll('table.data-table thead th .sort-arrow').forEach(s=>s.textContent='');th.querySelector('.sort-arrow').textContent=sortDir===1?' ▲':' ▼';applySort();currentPage=1;renderTable()})});
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('modal-overlay'))closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()})}
+</script>
+</body>
+</html>
