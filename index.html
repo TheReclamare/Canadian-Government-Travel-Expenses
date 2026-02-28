@@ -204,8 +204,10 @@ function updateLoader(p,t){document.getElementById('loader-fill').style.width=p+
 updateLoader(5,'Fetching CSV…');
 
 Papa.parse('2015travelq.csv',{
-download:true,header:true,skipEmptyLines:true,
+download:true,header:true,skipEmptyLines:'greedy',dynamicTyping:false,
 complete:function(res){
+console.log('PapaParse complete:',res.data.length,'rows',res.errors.length,'errors');
+if(res.errors.length>0)console.warn('Parse errors:',res.errors.slice(0,5));
 updateLoader(50,'Processing '+res.data.length.toLocaleString()+' records…');
 allData=res.data.map(r=>({
 name:(r.name||'').trim(),title_en:(r.title_en||'').trim(),
